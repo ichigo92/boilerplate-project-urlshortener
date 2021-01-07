@@ -48,9 +48,13 @@ app.get('/api/hello', function(req, res) {
 app.get('/api/shorturl/:shorturl', (req, res) => {
   checkMongoDBConnection();
   const url = req.params.shorturl;
+  if (!url) {
+    return res.json({error: "invalid url"})
+  }
   Shorturl.findOne({short_url: url}, (err, data) => {
     if (err) return res.json({error:  err});
-    res.redirect(`https://${data.original_url}`);
+    if (!err && !data) return res.json({error: "invalid url"});
+    res.redirect(data.original_url);
   });
 });
 
@@ -58,9 +62,16 @@ app.post('/api/shorturl/new', async (req, res) => {
   checkMongoDBConnection();
   const url = req.body.url;
   
-  dns.lookup(url, async (err, address, family) => {
+  if (!url) {
+    console.log('url--', url)
+    return res.json({error: "invalid url"})
+  }
+  console.log('url', url);
+  let temp_url = url.split(/^(?:https?:\/\/)?(?:[^@\n]+@)?(?:www\.)?([^:\/\n?]+)/img)[1];
+  dns.lookup(temp_url, async (err, address, family) => {
+    console.log(`address ${address} IPv4${family} err${err}`);
     if (err) {
-      res.json({error: "Invalid Url"});
+      res.json({error: "invalid url"});
     } else {
       const exists = await Shorturl.findOne({original_url: url});
       if (exists) {
